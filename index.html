@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111318">
+  <meta name="description" content="観た映画と訪れた場所を、自分の端末に記録する個人用ログアプリ">
+  <title>Reel & Places</title>
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">MY FILM & PLACE JOURNAL</p>
+        <h1>Reel & Places</h1>
+      </div>
+      <button class="icon-button" id="settingsButton" type="button" aria-label="設定とバックアップ">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.12.38.35.73.66 1 .3.25.69.4 1.1.4H21v4h-.09a1.7 1.7 0 0 0-1.51.6Z"/></svg>
+      </button>
+    </header>
+
+    <main>
+      <section class="view active" id="mapView" data-view="map" aria-labelledby="mapTitle">
+        <div class="section-heading map-heading">
+          <div><p class="kicker">PLACES</p><h2 id="mapTitle">思い出の地図</h2></div>
+          <span class="count-badge" id="placeCount">0か所</span>
+        </div>
+        <div class="map-filters" aria-label="地図の表示カテゴリ">
+          <label class="filter-chip cinema"><input type="checkbox" value="cinema" checked><span>映画館</span></label>
+          <label class="filter-chip travel"><input type="checkbox" value="travel" checked><span>旅行</span></label>
+          <label class="filter-chip food"><input type="checkbox" value="food" checked><span>食事</span></label>
+          <label class="filter-chip other"><input type="checkbox" value="other" checked><span>その他</span></label>
+        </div>
+        <div id="mainMap" class="main-map" aria-label="訪れた場所の地図"></div>
+        <div class="map-empty overlay-empty hidden" id="mapEmpty">
+          <span class="empty-icon">⌖</span><strong>地図に思い出を置こう</strong>
+          <p>「追加」から映画館や旅先を登録すると、ここにピンが表示されます。</p>
+          <button type="button" class="secondary-button go-add">最初の場所を記録</button>
+        </div>
+      </section>
+
+      <section class="view" id="moviesView" data-view="movies" aria-labelledby="moviesTitle">
+        <div class="section-heading">
+          <div><p class="kicker">COLLECTION</p><h2 id="moviesTitle">映画・食事一覧</h2></div>
+          <span class="count-badge" id="movieCount">0作品</span>
+        </div>
+        <div class="segmented compact" id="libraryTypeFilter" role="group" aria-label="一覧の種類">
+          <button type="button" class="active" data-value="movie">映画</button>
+          <button type="button" data-value="meal">食事</button>
+        </div>
+        <div id="movieLibrary">
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input type="search" id="movieSearch" placeholder="タイトル、タグで検索" aria-label="映画を検索">
+          <button type="button" id="clearSearch" class="clear-search hidden" aria-label="検索を消去">×</button>
+        </div>
+        <details class="filter-panel" id="filterPanel">
+          <summary>絞り込み <span id="activeFilterCount"></span></summary>
+          <div class="filter-grid">
+            <label>年<select id="yearFilter"><option value="">すべて</option></select></label>
+            <label>評価<select id="ratingFilter"><option value="">すべて</option><option value="4.5">4.5以上</option><option value="4">4.0以上</option><option value="3">3.0以上</option><option value="2">2.0以上</option></select></label>
+            <label>鑑賞方法<select id="methodFilter"><option value="">すべて</option></select></label>
+            <label>映画館<select id="cinemaFilter"><option value="">すべて</option></select></label>
+            <label class="full">タグ<input type="text" id="tagFilter" placeholder="例：SF"></label>
+          </div>
+          <button type="button" class="text-button" id="resetFilters">絞り込みをリセット</button>
+        </details>
+        <div class="card-list" id="movieList"></div>
+        <div class="empty-state hidden" id="movieEmpty"><span class="empty-icon">◉</span><h3>まだ映画がありません</h3><p>観た映画を記録すると、作品ごとにここへまとまります。</p><button type="button" class="primary-button go-add">映画を記録する</button></div>
+        </div>
+        <div id="mealLibrary" class="hidden">
+          <div class="card-list meal-list" id="mealList"></div>
+          <div class="empty-state hidden" id="mealEmpty"><span class="empty-icon">♨</span><h3>まだ食事の記録がありません</h3><p>おいしかった料理とお店を、写真つきで残せます。</p><button type="button" class="primary-button go-add-meal">食事を記録する</button></div>
+        </div>
+      </section>
+
+      <section class="view" id="historyView" data-view="history" aria-labelledby="historyTitle">
+        <div class="section-heading">
+          <div><p class="kicker">TIMELINE</p><h2 id="historyTitle">鑑賞・訪問履歴</h2></div>
+          <span class="count-badge" id="historyCount">0件</span>
+        </div>
+        <div class="segmented compact" id="historyTypeFilter" role="group" aria-label="履歴の種類">
+          <button type="button" class="active" data-value="all">すべて</button>
+          <button type="button" data-value="movie">映画</button>
+          <button type="button" data-value="meal">食事</button>
+          <button type="button" data-value="visit">訪問</button>
+        </div>
+        <div class="timeline" id="timeline"></div>
+        <div class="empty-state hidden" id="historyEmpty"><span class="empty-icon">✦</span><h3>最初の思い出を残しましょう</h3><p>映画の鑑賞も、場所への訪問も、日付順に並びます。</p><button type="button" class="primary-button go-add">記録を追加する</button></div>
+      </section>
+
+      <section class="view" id="addView" data-view="add" aria-labelledby="addTitle">
+        <div class="section-heading">
+          <div><p class="kicker">NEW MEMORY</p><h2 id="addTitle">記録を追加</h2></div>
+        </div>
+        <div class="segmented" id="recordType" role="group" aria-label="記録の種類">
+          <button type="button" class="active" data-value="movie"><span>◉</span>映画を観た</button>
+          <button type="button" data-value="meal"><span>♨</span>食事をした</button>
+          <button type="button" data-value="visit"><span>⌖</span>場所へ行った</button>
+        </div>
+
+        <form id="movieForm" class="record-form" novalidate>
+          <input type="hidden" id="movieLogId"><input type="hidden" id="movieId">
+          <div class="form-card">
+            <label class="field"><span>映画タイトル <b>必須</b></span><input id="movieTitle" type="text" list="movieTitles" placeholder="作品名を入力" required autocomplete="off"><datalist id="movieTitles"></datalist></label>
+            <div class="two-columns">
+              <label class="field"><span>鑑賞日 <b>必須</b></span><input id="movieDate" type="date" required></label>
+              <label class="field"><span>鑑賞方法 <b>必須</b></span><select id="movieMethod" required></select></label>
+            </div>
+            <div class="conditional hidden" id="streamingFields">
+              <label class="field"><span>配信サービス</span><select id="streamingService"></select></label>
+            </div>
+            <div class="two-columns movie-credits">
+              <label class="field"><span>公開年</span><input id="movieReleaseYear" type="number" min="1888" max="2100" inputmode="numeric" placeholder="例：2026"></label>
+              <label class="field"><span>監督</span><input id="movieDirector" type="text" placeholder="監督名"></label>
+            </div>
+            <label class="field"><span>主演</span><input id="movieStarring" type="text" placeholder="主演俳優名（複数可）"></label>
+            <fieldset class="rating-field"><legend>評価（0.1刻み）</legend><div class="rating-control"><input id="movieRating" type="range" min="0" max="5" step="0.1" value="0"><output id="ratingOutput">未評価</output></div><div class="rating-scale"><span>未評価</span><span>5.0</span></div></fieldset>
+            <div class="image-field">
+              <span class="field-title">ポスター</span>
+              <label class="image-picker" for="moviePoster"><span class="image-preview poster-preview" id="moviePosterPreview">＋</span><span><strong>画像を選ぶ</strong><small>端末内に縮小して保存します</small></span></label>
+              <input id="moviePoster" type="file" accept="image/*" hidden>
+              <button type="button" class="text-button remove-image hidden" data-image="poster">画像を削除</button>
+            </div>
+          </div>
+
+          <div class="form-card conditional hidden" id="cinemaFields">
+            <div class="card-label"><span class="dot cinema-dot"></span>映画館の情報</div>
+            <label class="field"><span>登録済みの映画館</span><select id="existingCinema"><option value="">新しい映画館を登録</option></select></label>
+            <div id="newCinemaFields">
+              <label class="field"><span>映画館名 <b>必須</b></span><input id="cinemaName" type="text" placeholder="例：TOHOシネマズ新宿"></label>
+              <div class="location-row"><div><strong>地図上の位置</strong><small id="cinemaCoordinates">地図をタップして指定</small></div><button type="button" class="text-button locate-button" data-target="cinema">現在地</button></div>
+              <div id="cinemaPickerMap" class="picker-map" aria-label="映画館の位置を指定"></div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <label class="field"><span>感想</span><textarea id="movieNotes" rows="5" placeholder="心に残ったこと、好きなシーンなど"></textarea></label>
+            <label class="field"><span>タグ</span><input id="movieTags" type="text" placeholder="SF, IMAX, 友人と"><small>カンマで区切って入力</small></label>
+          </div>
+          <button type="submit" class="primary-button submit-button"><span id="movieSubmitText">映画の記録を保存</span></button>
+          <button type="button" class="text-button cancel-edit hidden" data-form="movie">編集をキャンセル</button>
+        </form>
+
+        <form id="mealForm" class="record-form hidden" novalidate>
+          <input type="hidden" id="mealLogId"><input type="hidden" id="mealPlaceId">
+          <div class="form-card">
+            <label class="field"><span>店名 <b>必須</b></span><input id="mealPlaceName" type="text" list="foodPlaceNames" placeholder="レストランやお店の名前" required autocomplete="off"><datalist id="foodPlaceNames"></datalist></label>
+            <label class="field"><span>料理・メニュー</span><input id="mealTitle" type="text" placeholder="例：オムライス"></label>
+            <label class="field"><span>日付 <b>必須</b></span><input id="mealDate" type="date" required></label>
+            <fieldset class="rating-field"><legend>評価（0.1刻み）</legend><div class="rating-control"><input id="mealRating" type="range" min="0" max="5" step="0.1" value="0"><output id="mealRatingOutput">未評価</output></div><div class="rating-scale"><span>未評価</span><span>5.0</span></div></fieldset>
+            <div class="location-row"><div><strong>地図上の位置 <b>必須</b></strong><small id="mealCoordinates">地図をタップして指定</small></div><button type="button" class="text-button locate-button" data-target="meal">現在地</button></div>
+            <div id="mealPickerMap" class="picker-map" aria-label="お店の位置を指定"></div>
+          </div>
+          <div class="form-card">
+            <label class="field"><span>感想・メモ</span><textarea id="mealNotes" rows="5" placeholder="味、雰囲気、また食べたいものなど"></textarea></label>
+            <label class="field"><span>タグ</span><input id="mealTags" type="text" placeholder="ランチ, イタリアン"><small>カンマで区切って入力</small></label>
+            <div class="image-field">
+              <span class="field-title">写真</span>
+              <label class="image-picker" for="mealPhoto"><span class="image-preview" id="mealPhotoPreview">＋</span><span><strong>写真を選ぶ</strong><small>端末内に縮小して保存します</small></span></label>
+              <input id="mealPhoto" type="file" accept="image/*" hidden>
+              <button type="button" class="text-button remove-image hidden" data-image="meal">画像を削除</button>
+            </div>
+          </div>
+          <button type="submit" class="primary-button submit-button"><span id="mealSubmitText">食事の記録を保存</span></button>
+          <button type="button" class="text-button cancel-edit hidden" data-form="meal">編集をキャンセル</button>
+        </form>
+
+        <form id="visitForm" class="record-form hidden" novalidate>
+          <input type="hidden" id="visitLogId"><input type="hidden" id="visitPlaceId">
+          <div class="form-card">
+            <label class="field"><span>場所名 <b>必須</b></span><input id="placeName" type="text" list="placeNames" placeholder="場所や施設の名前" required autocomplete="off"><datalist id="placeNames"></datalist></label>
+            <div class="two-columns">
+              <label class="field"><span>日付 <b>必須</b></span><input id="visitDate" type="date" required></label>
+              <label class="field"><span>カテゴリ</span><select id="placeCategory"><option value="travel">旅行</option><option value="cinema">映画館</option><option value="food">食事</option><option value="other">その他</option></select></label>
+            </div>
+            <div class="location-row"><div><strong>地図上の位置 <b>必須</b></strong><small id="placeCoordinates">地図をタップして指定</small></div><button type="button" class="text-button locate-button" data-target="place">現在地</button></div>
+            <div id="placePickerMap" class="picker-map" aria-label="訪問場所の位置を指定"></div>
+          </div>
+          <div class="form-card">
+            <label class="field"><span>感想・メモ</span><textarea id="visitNotes" rows="5" placeholder="その場所での思い出やメモ"></textarea></label>
+            <label class="field"><span>タグ</span><input id="visitTags" type="text" placeholder="温泉, 家族旅行"><small>カンマで区切って入力</small></label>
+          </div>
+          <button type="submit" class="primary-button submit-button"><span id="visitSubmitText">訪問の記録を保存</span></button>
+          <button type="button" class="text-button cancel-edit hidden" data-form="visit">編集をキャンセル</button>
+        </form>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="メインメニュー">
+      <button type="button" class="active" data-view-target="map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15M15 6v15"/></svg><span>地図</span></button>
+      <button type="button" data-view-target="movies"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="2"/><path d="M7 5V3m5 2V3m5 2V3M3 9h18M7 13h3m-3 3h3"/></svg><span>一覧</span></button>
+      <button type="button" data-view-target="history"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>履歴</span></button>
+      <button type="button" data-view-target="add"><span class="add-tab-icon">＋</span><span>追加</span></button>
+    </nav>
+  </div>
+
+  <dialog id="detailDialog" class="sheet-dialog"><div class="dialog-inner"><div class="dialog-handle"></div><button type="button" class="dialog-close" data-close-dialog aria-label="閉じる">×</button><div id="detailContent"></div></div></dialog>
+  <dialog id="settingsDialog" class="sheet-dialog"><div class="dialog-inner settings-inner"><div class="dialog-handle"></div><button type="button" class="dialog-close" data-close-dialog aria-label="閉じる">×</button><p class="kicker">DATA & SETTINGS</p><h2>設定とバックアップ</h2><div class="data-summary" id="dataSummary"></div><section class="settings-section"><h3>大切な記録を守る</h3><p>この端末に保存された全記録を、1つのバックアップファイルとして保存・復元できます。</p><button type="button" id="backupButton" class="primary-button">バックアップを保存</button><button type="button" id="restoreButton" class="secondary-button">バックアップから復元</button><input type="file" id="restoreInput" accept=".reelplaces,.json,application/json" hidden></section><section class="settings-section danger-zone"><h3>すべてのデータを削除</h3><p>この端末内の映画・場所・履歴をすべて消去します。</p><button type="button" id="clearDataButton" class="danger-button">全データを削除</button></section><p class="app-version">Reel & Places — device-only edition</p></div></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>
